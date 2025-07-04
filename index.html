@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Rep Counter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    #count {
+      font-size: 5rem;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏋️ Gym Rep/Step Counter</h1>
+  <p>Latest Count:</p>
+  <div id="count">Loading...</div>
+
+  <script>
+    const supabaseUrl = 'https://nveofbxzhdksrjebijxu.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52ZW9mYnh6aGRrc3JqZWJpanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NDQ5NzAsImV4cCI6MjA2NzIyMDk3MH0.xZ5BIzKXNM9i1FhIHtFT7SuMsEgZbZuWtNFfPk9VAus';
+    const backendUrl = 'http://localhost:5000/latest-count';
+    const table = 'rep_data';
+
+    async function fetchLatestCount() {
+      const response = await fetch(`${supabaseUrl}/rest/v1/${table}?select=count&order=created_at.desc&limit=1`, {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`
+        }
+      });
+
+      const data = await response.json();
+      const latest = data[0]?.count ?? 'No data';
+      document.getElementById('count').textContent = latest;
+    }
+
+    // Poll every 2 seconds
+    fetchLatestCount();
+    setInterval(fetchLatestCount, 2000);
+  </script>
+</body>
+</html>
