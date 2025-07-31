@@ -132,6 +132,7 @@ def index():
           <h3>📈 Daily & Weekly Summary</h3>
           <div class="summary" id="dailyTotal">Loading daily total...</div>
           <div class="summary" id="weeklyTotal">Loading weekly total...</div>
+          <div class="summary" id="averagePerDay">Calculating average...</div>
         </div>
 
         <div class="card">
@@ -266,9 +267,11 @@ def index():
 
           const dailyTotal = daily.reduce((sum, row) => sum + row.count, 0);
           const weeklyTotal = weekly.reduce((sum, row) => sum + row.count, 0);
+          const avgPerDay = (weeklyTotal / 7).toFixed(2);
 
           document.getElementById('dailyTotal').textContent = `Total today: ${dailyTotal}`;
           document.getElementById('weeklyTotal').textContent = `Total past 7 days: ${weeklyTotal}`;
+          document.getElementById('averagePerDay').textContent = `📊 Avg per day: ${avgPerDay} reps`;
         }
 
         async function refreshData() {

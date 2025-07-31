@@ -120,6 +120,7 @@
       <h3>📈 Daily & Weekly Summary</h3>
       <div class="summary" id="dailyTotal">Loading daily total...</div>
       <div class="summary" id="weeklyTotal">Loading weekly total...</div>
+      <div class="summary" id="averagePerDay">Calculating average...</div>
     </div>
 
     <div class="card">
@@ -157,29 +158,28 @@
       refreshData();
     }
 
-async function updateDeviceConfig(user, type) {
-  const res = await fetch(`${supabaseUrl}/rest/v1/device_config`, {
-    method: 'POST',
-    headers: {
-      apikey: supabaseKey,
-      Authorization: `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates'
-    },
-    body: JSON.stringify({
-      device_id: deviceId,
-      user: user,
-      equipment: type
-    })
-  });
+    async function updateDeviceConfig(user, type) {
+      const res = await fetch(`${supabaseUrl}/rest/v1/device_config`, {
+        method: 'POST',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          device_id: deviceId,
+          user: user,
+          equipment: type
+        })
+      });
 
-  if (res.ok) {
-    console.log(`✅ Config updated: ${user}, ${type}`);
-  } else {
-    console.error(`❌ Config update failed: ${res.status} - ${await res.text()}`);
-  }
-}
-
+      if (res.ok) {
+        console.log(`✅ Config updated: ${user}, ${type}`);
+      } else {
+        console.error(`❌ Config update failed: ${res.status} - ${await res.text()}`);
+      }
+    }
 
     async function fetchSupabase(query) {
       const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
@@ -255,9 +255,11 @@ async function updateDeviceConfig(user, type) {
 
       const dailyTotal = daily.reduce((sum, row) => sum + row.count, 0);
       const weeklyTotal = weekly.reduce((sum, row) => sum + row.count, 0);
+      const avgPerDay = (weeklyTotal / 7).toFixed(2);
 
       document.getElementById('dailyTotal').textContent = `Total today: ${dailyTotal}`;
       document.getElementById('weeklyTotal').textContent = `Total past 7 days: ${weeklyTotal}`;
+      document.getElementById('averagePerDay').textContent = `📊 Avg per day: ${avgPerDay} reps`;
     }
 
     async function refreshData() {
