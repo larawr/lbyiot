@@ -1,6 +1,5 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Response
 import requests
-import datetime
 
 app = Flask(__name__)
 latest_count = 0
@@ -8,12 +7,292 @@ latest_count = 0
 SUPABASE_URL = "https://YOUR_PROJECT.supabase.co/rest/v1/rep_data"
 SUPABASE_API_KEY = "YOUR_ANON_KEY"
 
+@app.route('/')
+def index():
+    html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>My Gym Tracker</title>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <style>
+        body {
+          font-family: 'Inter', sans-serif;
+          background-color: #f3f4f6;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 900px;
+          margin: auto;
+          padding: 2rem;
+          text-align: center;
+        }
+        h1 {
+          font-size: 2.5rem;
+          color: #1f2937;
+          margin-bottom: 1rem;
+        }
+        .dropdowns {
+          display: flex;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+        select, input[type="text"] {
+          font-size: 1rem;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+          border: 1px solid #d1d5db;
+        }
+        button {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 8px;
+          background-color: #3b82f6;
+          color: white;
+          cursor: pointer;
+        }
+        .card {
+          background: white;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+          border-radius: 12px;
+          padding: 1.5rem;
+          margin: 1.5rem 0;
+        }
+        #count {
+          font-size: 4rem;
+          color: #22c55e;
+          margin: 1rem 0;
+        }
+        .summary {
+          font-size: 1.1rem;
+          margin: 0.5rem;
+        }
+        canvas {
+          max-width: 100%;
+        }
+        #spinner {
+          display: none;
+          margin: 1rem auto;
+          border: 6px solid #f3f3f3;
+          border-top: 6px solid #3b82f6;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 500px) {
+          h1 { font-size: 1.7rem; }
+          #count { font-size: 2.5rem; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>🏋️‍♂️ My Gym Tracker</h1>
+
+        <div class="dropdowns">
+          <input id="user" type="text" placeholder="Enter your name" />
+          <select id="equipment">
+            <option value="dumbbell">💪 Dumbbell</option>
+            <option value="treadmill">🚶 Treadmill</option>
+            <option value="jump_rope">🤸 Jump Rope</option>
+            <option value="bench_press">🏋️ Bench Press</option>
+            <option value="leg_press">🦵 Leg Press</option>
+            <option value="rowing_machine">🚣 Rowing Machine</option>
+            <option value="stationary_bike">🚴 Stationary Bike</option>
+            <option value="elliptical">🕺 Elliptical</option>
+          </select>
+          <button onclick="saveSettings()">Save Settings</button>
+        </div>
+
+        <h2 id="greeting"></h2>
+        <div id="spinner"></div>
+
+        <div class="card">
+          <p>Latest Count:</p>
+          <div id="count">Loading...</div>
+        </div>
+
+        <div class="card">
+          <h3>📊 Last 5 Entries</h3>
+          <canvas id="historyChart"></canvas>
+        </div>
+
+        <div class="card">
+          <h3>📈 Daily & Weekly Summary</h3>
+          <div class="summary" id="dailyTotal">Loading daily total...</div>
+          <div class="summary" id="weeklyTotal">Loading weekly total...</div>
+        </div>
+
+        <div class="card">
+          <h3>🥧 Total Reps by Equipment</h3>
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+
+      <script>
+        const supabaseUrl = 'https://nveofbxzhdksrjebijxu.supabase.co';
+        const supabaseKey = 'YOUR_PUBLIC_ANON_KEY_HERE';
+        const table = 'rep_data';
+        const configTable = 'device_config';
+        const deviceId = 'esp32-001';
+
+        let savedUser = '';
+        let savedType = '';
+        let historyChart, pieChart;
+
+        function showSpinner(show) {
+          document.getElementById('spinner').style.display = show ? 'block' : 'none';
+        }
+
+        function saveSettings() {
+          const user = document.getElementById('user').value.trim();
+          const type = document.getElementById('equipment').value;
+
+          if (!user) return;
+
+          savedUser = user;
+          savedType = type;
+
+          document.getElementById('greeting').textContent = `Hello, ${user}! Let's crush those reps! 💪`;
+          updateDeviceConfig(user, type);
+          refreshData();
+        }
+
+        async function updateDeviceConfig(user, type) {
+          const res = await fetch(`${supabaseUrl}/rest/v1/device_config`, {
+            method: 'POST',
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({
+              device_id: deviceId,
+              user: user,
+              equipment: type
+            })
+          });
+
+          if (res.ok) {
+            console.log(`✅ Config updated: ${user}, ${type}`);
+          } else {
+            console.error(`❌ Config update failed: ${res.status} - ${await res.text()}`);
+          }
+        }
+
+        async function fetchSupabase(query) {
+          const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`
+            }
+          });
+          return res.json();
+        }
+
+        async function fetchLatestCount(user, type) {
+          const data = await fetchSupabase(`user=eq.${user}&type=eq.${type}&select=count&order=created_at.desc&limit=1`);
+          document.getElementById('count').textContent = data[0]?.count ?? 0;
+        }
+
+        async function fetchHistoryData(user, type) {
+          const data = await fetchSupabase(`user=eq.${user}&type=eq.${type}&select=count,created_at&order=created_at.desc&limit=5`);
+          return data.reverse();
+        }
+
+        async function updateHistoryChart(user, type) {
+          const data = await fetchHistoryData(user, type);
+          const labels = data.map(e => new Date(e.created_at).toLocaleTimeString());
+          const counts = data.map(e => e.count);
+
+          if (historyChart) historyChart.destroy();
+          historyChart = new Chart(document.getElementById('historyChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{
+                label: `${type} Count`,
+                data: counts,
+                backgroundColor: '#60a5fa'
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+        }
+
+        async function updatePieChart(user) {
+          const res = await fetchSupabase(`user=eq.${user}&select=type,count`);
+          const totals = {};
+          for (const row of res) totals[row.type] = (totals[row.type] || 0) + row.count;
+
+          if (pieChart) pieChart.destroy();
+          pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+              labels: Object.keys(totals),
+              datasets: [{
+                data: Object.values(totals),
+                backgroundColor: ['#f87171', '#60a5fa', '#34d399', '#facc15', '#a78bfa', '#f472b6']
+              }]
+            }
+          });
+        }
+
+        async function updateSummaries(user, type) {
+          const today = new Date().toISOString().split('T')[0];
+          const last7 = new Date();
+          last7.setDate(last7.getDate() - 7);
+          const last7ISO = last7.toISOString();
+
+          const [daily, weekly] = await Promise.all([
+            fetchSupabase(`user=eq.${user}&type=eq.${type}&created_at=gte.${today}&select=count`),
+            fetchSupabase(`user=eq.${user}&type=eq.${type}&created_at=gte.${last7ISO}&select=count`)
+          ]);
+
+          const dailyTotal = daily.reduce((sum, row) => sum + row.count, 0);
+          const weeklyTotal = weekly.reduce((sum, row) => sum + row.count, 0);
+
+          document.getElementById('dailyTotal').textContent = `Total today: ${dailyTotal}`;
+          document.getElementById('weeklyTotal').textContent = `Total past 7 days: ${weeklyTotal}`;
+        }
+
+        async function refreshData() {
+          if (!savedUser || !savedType) return;
+          showSpinner(true);
+          await fetchLatestCount(savedUser, savedType);
+          await updateHistoryChart(savedUser, savedType);
+          await updateSummaries(savedUser, savedType);
+          await updatePieChart(savedUser);
+          showSpinner(false);
+        }
+
+        setInterval(refreshData, 10000);
+      </script>
+    </body>
+    </html>
+    """
+    return Response(html, mimetype='text/html')
+
 @app.route('/update/<int:count>')
 def update(count):
     global latest_count
     latest_count = count
 
-    # Send to Supabase
     headers = {
         "apikey": SUPABASE_API_KEY,
         "Authorization": f"Bearer {SUPABASE_API_KEY}",
@@ -21,9 +300,7 @@ def update(count):
         "Prefer": "return=minimal"
     }
 
-    data = {
-        "count": count
-    }
+    data = { "count": count }
 
     try:
         r = requests.post(SUPABASE_URL, headers=headers, json=data)
