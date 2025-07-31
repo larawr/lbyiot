@@ -10,13 +10,13 @@ unsigned long lastMotionTime = 0;  // Variable to debounce motion sensor
 // ESP-NOW message structure (including device_id, count)
 typedef struct struct_message {
   int count;
-  char device_id[18];  // MAC address length (18 characters max for MAC address as a string)
+  char device_id[18];  // 18 characters max for device ID
 } struct_message;
 
 struct_message outgoingData;
 
-// MAC address of the second ESP32 (WiFi ESP32) – Replace with the actual MAC address of your Wi-Fi ESP32
-uint8_t receiverMAC[] = {0x5C, 0x01, 0x3B, 0x64, 0xE0, 0xC0};  // Example MAC address (replace with the correct one)
+// MAC address of the second ESP32 (WiFi ESP32)
+uint8_t receiverMAC[] = {0x5C, 0x01, 0x3B, 0x64, 0xE0, 0xC0}; 
 
 void setup() {
   // Start serial communication for debugging
@@ -28,15 +28,10 @@ void setup() {
 
   // Initialize Wi-Fi in station mode
   WiFi.mode(WIFI_STA);  // Set ESP32 to Station mode
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("❌ Wi-Fi not connected! Please check the connection.");
-    return;
-  }
-  Serial.println("✅ Wi-Fi Connected!");
 
   // Initialize ESP-NOW
   if (esp_now_init() != ESP_OK) {
-    Serial.println("❌ ESP-NOW init failed");
+    Serial.println("ESP-NOW init failed");
     return;  // If ESP-NOW init fails, stop further execution
   }
 
@@ -48,17 +43,17 @@ void setup() {
 
   // Add peer to the ESP-NOW network
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-    Serial.println("❌ Failed to add peer");
+    Serial.println("Failed to add peer");
     return;  // If adding peer fails, stop further execution
   }
 
-  // Get and store the MAC Address of Device 1 (Sensor ESP32)
-  String deviceMAC = WiFi.macAddress();
-  deviceMAC.toCharArray(outgoingData.device_id, 18);  // Store MAC address in device_id
-  Serial.println("Device MAC Address: " + deviceMAC);  // Print Device MAC Address to Serial Monitor
+  // Set custom device ID (can be any string up to 17 chars)
+  strcpy(outgoingData.device_id, "ESP32-A");
+  Serial.print("Device ID: ");
+  Serial.println(outgoingData.device_id);
 
   // Log ESP-NOW ready status
-  Serial.println("✅ ESP-NOW ready");
+  Serial.println("ESP-NOW ready");
 }
 
 void loop() {

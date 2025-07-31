@@ -11,7 +11,7 @@ const char* password = "(N33r0n!12-11)";
 const char* supabaseUrl = "https://nveofbxzhdksrjebijxu.supabase.co";
 const char* apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52ZW9mYnh6aGRrc3JqZWJpanh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NDQ5NzAsImV4cCI6MjA2NzIyMDk3MH0.xZ5BIzKXNM9i1FhIHtFT7SuMsEgZbZuWtNFfPk9VAus";
 const char* repEndpoint = "/rest/v1/rep_data";
-const char* configEndpoint = "/rest/v1/device_config?device_id=eq.";  // 🔁 We’ll append device_id here
+const char* configEndpoint = "/rest/v1/device_config?device_id=eq.";  // We’ll append device_id here
 
 // Rep counter
 int lastRep = 0;
@@ -37,7 +37,7 @@ void OnDataRecv(const esp_now_recv_info* info, const uint8_t* incomingData, int 
   String deviceIdReceived = incoming.device_id;
 
   // Log received data
-  Serial.printf("📥 Received data from device: %s\n", deviceIdReceived);
+  Serial.printf("Received data from device: %s\n", deviceIdReceived);
   Serial.printf("Received rep count: %d\n", rep);
 
   // Check if the rep count has changed
@@ -52,7 +52,7 @@ void OnDataRecv(const esp_now_recv_info* info, const uint8_t* incomingData, int 
 }
 
 void fetchDeviceConfig(String deviceId) {
-  Serial.println("📡 Fetching device configuration from Supabase...");
+  Serial.println("Fetching device configuration from Supabase...");
 
   HTTPClient http;
   String fullUrl = String(supabaseUrl) + String(configEndpoint) + deviceId;
@@ -69,7 +69,7 @@ void fetchDeviceConfig(String deviceId) {
 
   if (code == 200) {
     String payload = http.getString();
-    Serial.println("📥 Config fetched successfully!");
+    Serial.println("Config fetched successfully!");
 
     DynamicJsonDocument doc(512);
     DeserializationError error = deserializeJson(doc, payload);
@@ -82,13 +82,13 @@ void fetchDeviceConfig(String deviceId) {
     if (doc.size() > 0) {
       username = doc[0]["user"].as<String>();
       equipmentType = doc[0]["equipment"].as<String>();
-      Serial.println("📥 Config: " + username + ", " + equipmentType);
+      Serial.println("Config: " + username + ", " + equipmentType);
       sendToSupabase(count, equipmentType, username, deviceId);  // Send rep count to Supabase
     } else {
-      Serial.println("❌ No configuration found for device: " + deviceId);
+      Serial.println("No configuration found for device: " + deviceId);
     }
   } else {
-    Serial.printf("❌ Failed to fetch config: %d\n", code);
+    Serial.printf("Failed to fetch config: %d\n", code);
   }
 
   http.end();
@@ -121,14 +121,14 @@ void sendToSupabase(int repCount, String equipmentType, String username, String 
     Serial.println(httpResponseCode);
 
     if (httpResponseCode > 0) {
-      Serial.println("✅ Data sent to Supabase!");
+      Serial.println("Data sent to Supabase!");
     } else {
-      Serial.printf("❌ Error: %s\n", http.errorToString(httpResponseCode).c_str());
+      Serial.printf("Error: %s\n", http.errorToString(httpResponseCode).c_str());
     }
 
     http.end();
   } else {
-    Serial.println("❌ Wi-Fi not connected! Cannot send data.");
+    Serial.println("Wi-Fi not connected! Cannot send data.");
   }
 }
 
@@ -149,7 +149,7 @@ void setup() {
   // Initialize ESP-NOW
   WiFi.mode(WIFI_STA);
   if (esp_now_init() != ESP_OK) {
-    Serial.println("❌ ESP-NOW initialization failed");
+    Serial.println("ESP-NOW initialization failed");
     return;
   }
 
@@ -163,7 +163,7 @@ void setup() {
   // Register the ESP-NOW callback function to handle received data
   esp_now_register_recv_cb(OnDataRecv);
 
-  Serial.println("✅ ESP-NOW Initialized and Peer Added");
+  Serial.println("ESP-NOW Initialized and Peer Added");
 }
 
 void loop() {
